@@ -1,0 +1,47 @@
+{
+  "pde": "Burgers",
+  "viscosity": 0.00318309886183791,
+  "domain_x": [
+    -1.0,
+    1.0
+  ],
+  "domain_t": [
+    0.0,
+    1.0
+  ],
+  "reference_grid": [
+    256,
+    100
+  ],
+  "n_observations": 2000,
+  "architecture": "BurgersPINN(fourier=64x2.0, hidden=64x4res, act=tanh)",
+  "trainable_parameters": 41601,
+  "device": "cpu",
+  "adam_epochs": 5000,
+  "lbfgs_iterations": 300,
+  "metrics": {
+    "l2_relative_error": 0.2595411062563601,
+    "mse": 0.025288308065583104,
+    "mae": 0.037886823950777165,
+    "max_absolute_error": 2.166961495802516
+  },
+  "final_losses": {
+    "total": 0.1402120143175125,
+    "pde": 0.03439531475305557,
+    "boundary": 4.409416305861669e-6,
+    "initial": 0.0000411469372920692,
+    "data": 0.005063053220510483
+  },
+  "artifact_paths": {
+    "training_history": "artifacts/burgers_pinn/training_history.csv",
+    "observations": "artifacts/burgers_pinn/observations.csv",
+    "predictions": "artifacts/burgers_pinn/predictions.csv",
+    "summary": "artifacts/burgers_pinn/summary.json",
+    "reference_plot": "artifacts/burgers_pinn/reference_solution.png",
+    "comparison_plot": "artifacts/burgers_pinn/comparison.png",
+    "time_slices_plot": "artifacts/burgers_pinn/time_slices.png",
+    "error_plot": "artifacts/burgers_pinn/pointwise_error.png",
+    "loss_plot": "artifacts/burgers_pinn/loss_history.png",
+    "residual_plot": "artifacts/burgers_pinn/residual_distribution.png"
+  }
+}
