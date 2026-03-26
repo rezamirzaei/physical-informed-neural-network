@@ -163,18 +163,33 @@ fig_err"""
 
 How well does the trained PINN satisfy the Burgers equation at interior points?
 
-The pipeline automatically evaluates the PDE residual $r = u_t + u \\cdot u_x - \\nu\\, u_{xx}$ on 5,000 fresh interior collocation points and saves the distribution as an artifact.
+We sample 5,000 fresh interior collocation points and evaluate the PDE residual $r = u_t + u \\cdot u_x - \\nu\\, u_{xx}$ using automatic differentiation through the trained model.
 """
         )
     )
     cells.append(
         nbf.v4.new_code_cell(
-            """from IPython.display import Image
-residual_path = experiment.artifact_paths.get("residual_plot")
-if residual_path and residual_path.exists():
-    display(Image(filename=str(residual_path), width=800))
-else:
-    print("Residual plot not found — run with save_artifacts=True")"""
+            """import torch
+from physics_informed_neural_network.data import sample_interior_collocation
+from physics_informed_neural_network.physics import BurgersResidual
+
+# Sample fresh interior collocation points
+eval_pts = sample_interior_collocation(config.pde, 5000, seed=999)
+device = next(experiment.trainer.model.parameters()).device
+eval_tensor = torch.tensor(eval_pts, dtype=torch.float32, device=device).requires_grad_(True)
+
+# Compute PDE residuals
+pde = BurgersResidual(viscosity=config.pde.viscosity)
+with torch.enable_grad():
+    residuals = pde.residual(experiment.trainer.model, eval_tensor).detach().cpu().numpy()
+
+print(f"PDE residual statistics (n={len(residuals)}):")
+print(f"  Mean |r|:  {np.mean(np.abs(residuals)):.6e}")
+print(f"  Max  |r|:  {np.max(np.abs(residuals)):.6e}")
+print(f"  Std  r:    {np.std(residuals):.6e}")
+
+fig_res = plot_residual_distribution(residuals)
+fig_res"""
         )
     )
 

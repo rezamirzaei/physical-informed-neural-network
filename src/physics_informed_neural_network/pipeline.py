@@ -59,6 +59,7 @@ class ExperimentArtifacts:
     t_pred: np.ndarray
     metrics: ErrorMetrics
     summary: ExperimentSummary
+    trainer: "PINNTrainer | None" = None
     artifact_paths: dict[str, Path] = field(default_factory=dict)
 
 
@@ -285,5 +286,6 @@ def run_experiment(config: ProjectConfig) -> ExperimentArtifacts:
         t_pred=t_pred,
         metrics=metrics,
         summary=summary,
+        trainer=trainer,
         artifact_paths=artifact_paths,
     )
