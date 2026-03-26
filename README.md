@@ -26,6 +26,7 @@ The reference solution is generated analytically with the Cole-Hopf transform an
 - `tests/`: fast automated checks, including an end-to-end smoke test
 - `artifacts/burgers_pinn/`: example outputs from a reference run
 - `notebooks/burgers_equation_pinn.ipynb`: generated exploratory notebook
+- `notebooks/neural_operator_function_spaces.ipynb`: theory-heavy neural-operator tutorial notebook
 - `.github/workflows/ci.yml`: GitHub Actions workflow for install + test + notebook generation
 
 ## Method
@@ -104,10 +105,11 @@ The repository includes a sample run in `artifacts/burgers_pinn/`:
 
 ## Notebook
 
-The notebook is generated from `tools/generate_notebook.py` so that the narrative view stays consistent with the package code:
+The notebooks are generated from code so that the narrative view stays consistent with the package implementation:
 
 ```bash
 python tools/generate_notebook.py
+python tools/generate_neural_operator_notebook.py
 ```
 
 ## Shareability Checklist

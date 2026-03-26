@@ -19,4 +19,6 @@ jobs:
       - name: Run tests
         run: pytest -q
       - name: Regenerate notebook
-        run: python tools/generate_notebook.py
+        run: |
+          python tools/generate_notebook.py
+          python tools/generate_neural_operator_notebook.py
