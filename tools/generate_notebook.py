@@ -79,7 +79,6 @@ from physics_informed_neural_network.plotting import (
     plot_loss_history,
     plot_pointwise_error,
     plot_reference_solution,
-    plot_residual_distribution,
     plot_time_slices,
 )
 
@@ -156,45 +155,8 @@ fig_err"""
     cells.append(nbf.v4.new_code_cell("fig_loss = plot_loss_history(experiment.history)\nfig_loss"))
     cells.append(nbf.v4.new_code_cell("display(experiment.history.to_frame().tail(5))"))
 
-    # ---- PDE Residual Distribution ----
-    cells.append(
-        nbf.v4.new_markdown_cell(
-            """## 7 — PDE Residual Analysis
-
-How well does the trained PINN satisfy the Burgers equation at interior points?
-
-We sample 5,000 fresh interior collocation points and evaluate the PDE residual $r = u_t + u \\cdot u_x - \\nu\\, u_{xx}$ using automatic differentiation through the trained model.
-"""
-        )
-    )
-    cells.append(
-        nbf.v4.new_code_cell(
-            """import torch
-from physics_informed_neural_network.data import sample_interior_collocation
-from physics_informed_neural_network.physics import BurgersResidual
-
-# Sample fresh interior collocation points
-eval_pts = sample_interior_collocation(config.pde, 5000, seed=999)
-device = next(experiment.trainer.model.parameters()).device
-eval_tensor = torch.tensor(eval_pts, dtype=torch.float32, device=device).requires_grad_(True)
-
-# Compute PDE residuals
-pde = BurgersResidual(viscosity=config.pde.viscosity)
-with torch.enable_grad():
-    residuals = pde.residual(experiment.trainer.model, eval_tensor).detach().cpu().numpy()
-
-print(f"PDE residual statistics (n={len(residuals)}):")
-print(f"  Mean |r|:  {np.mean(np.abs(residuals)):.6e}")
-print(f"  Max  |r|:  {np.max(np.abs(residuals)):.6e}")
-print(f"  Std  r:    {np.std(residuals):.6e}")
-
-fig_res = plot_residual_distribution(residuals)
-fig_res"""
-        )
-    )
-
     # ---- Summary ----
-    cells.append(nbf.v4.new_markdown_cell("## 8 — Summary and Artifacts"))
+    cells.append(nbf.v4.new_markdown_cell("## 7 — Summary and Artifacts"))
     cells.append(nbf.v4.new_code_cell("display(experiment.summary.model_dump())"))
 
     cells.append(
@@ -203,29 +165,6 @@ fig_res"""
     {"artifact": k, "path": str(v)} for k, v in experiment.artifact_paths.items()
 ])
 display(artifact_df)"""
-        )
-    )
-
-    # ---- Interpretation ----
-    cells.append(
-        nbf.v4.new_markdown_cell(
-            """## 9 — Interpretation
-
-### What this notebook demonstrates
-
-- **Physics-informed learning**: the network is trained to satisfy the Burgers PDE, boundary conditions, initial conditions, and sparse observations simultaneously
-- **Cole-Hopf reference**: the exact analytical solution provides a rigorous ground truth
-- **Two-phase optimization**: Adam for broad exploration, L-BFGS for fine-tuning near convergence
-- **Fourier features**: random Fourier feature encoding helps the network represent high-frequency structure
-
-### Key metrics to watch
-
-| Metric | Good | Excellent |
-|--------|------|-----------|
-| Relative $L^2$ error | $< 5\\%$ | $< 1\\%$ |
-| Max absolute error | $< 0.1$ | $< 0.01$ |
-| PDE residual (mean) | $< 10^{-3}$ | $< 10^{-4}$ |
-"""
         )
     )
 

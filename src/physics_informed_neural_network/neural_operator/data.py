@@ -5,12 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.integrate import cumulative_trapezoid
+from scipy.integrate import cumulative_trapezoid, trapezoid
 
 from .config import NeuralOperatorExperimentConfig, OperatorProblemConfig
-
-# NumPy 2.0 renamed np.trapz → np.trapezoid; support both versions.
-_trapezoid = getattr(np, "trapezoid", None) or np.trapz
 
 
 @dataclass(slots=True)
@@ -149,7 +146,7 @@ def solve_dirichlet_diffusion_1d(
     forcing_primitive = cumulative_trapezoid(forcing, grid, initial=0.0)
     inv_diffusion = 1.0 / diffusion
 
-    constant = float(_trapezoid(forcing_primitive * inv_diffusion, grid) / _trapezoid(inv_diffusion, grid))
+    constant = float(trapezoid(forcing_primitive * inv_diffusion, grid) / trapezoid(inv_diffusion, grid))
     integrand = (constant - forcing_primitive) * inv_diffusion
     solution = cumulative_trapezoid(integrand, grid, initial=0.0)
 
