@@ -20,6 +20,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 dependencies = [
+    "ipykernel>=7.2.0",
     "ipython>=9.10.0",
     "matplotlib>=3.10",
     "nbformat>=5.10",
