@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from physical_informed_neural_network.config import ProjectConfig
+from .config import ProjectConfig
 
 
 def apply_smoke_test_preset(

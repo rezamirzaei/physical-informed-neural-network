@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
 
-from physical_informed_neural_network.config import ProjectConfig
-from physical_informed_neural_network.pipeline import ExperimentArtifacts, run_experiment
+from .config import ProjectConfig
+from .pipeline import ExperimentArtifacts, run_experiment
 
 try:
     __version__ = version("physics-informed-neural-network")

@@ -71,7 +71,7 @@ if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
 from physics_informed_neural_network.config import ProjectConfig
-from physics_informed_neural_network.data import generate_reference_solution, sample_observations
+from physics_informed_neural_network.data import evaluate_reference_solution, generate_reference_solution, sample_observations
 from physics_informed_neural_network.pipeline import run_experiment
 from physics_informed_neural_network.plotting import (
     apply_plot_style,
@@ -122,8 +122,7 @@ print(f"ν = {reference.viscosity:.6f}")"""
 
     cells.append(
         nbf.v4.new_code_cell(
-            """from physics_informed_neural_network.data import _cole_hopf_solution
-u_ref = _cole_hopf_solution(experiment.x_pred, experiment.t_pred, config.pde.viscosity)
+            """u_ref = evaluate_reference_solution(experiment.x_pred, experiment.t_pred, config.pde.viscosity)
 fig_cmp = plot_comparison(experiment.x_pred, experiment.t_pred, u_ref, experiment.u_pred)
 fig_cmp"""
         )

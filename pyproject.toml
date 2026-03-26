@@ -42,6 +42,7 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["physics_informed_neural_network*"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

@@ -6,16 +6,35 @@ import argparse
 from pathlib import Path
 from typing import Sequence
 
-from physical_informed_neural_network.config import ProjectConfig
-from physical_informed_neural_network.pipeline import run_experiment
-from physics_informed_neural_network.presets import build_smoke_test_config
+from pydantic import ValidationError
+
+from . import __version__
+from .config import ProjectConfig
+from .pipeline import run_experiment
+from .presets import build_smoke_test_config
+
+
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed
+
+
+def _non_negative_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("must be a non-negative integer")
+    return parsed
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="burgers-pinn",
         description="Train and evaluate a physics-informed neural network for the 1-D viscous Burgers equation.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument(
         "--smoke-test",
         action="store_true",
@@ -26,13 +45,13 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("auto", "cpu", "cuda", "mps"),
         help="Override the execution device.",
     )
-    parser.add_argument("--seed", type=int, help="Override the random seed.")
-    parser.add_argument("--adam-epochs", type=int, help="Override the number of Adam epochs.")
-    parser.add_argument("--lbfgs-iterations", type=int, help="Override the number of L-BFGS iterations.")
-    parser.add_argument("--n-collocation", type=int, help="Override the number of interior collocation points.")
-    parser.add_argument("--n-boundary", type=int, help="Override the number of boundary points per edge.")
-    parser.add_argument("--n-initial", type=int, help="Override the number of initial-condition points.")
-    parser.add_argument("--n-observed", type=int, help="Override the number of observed data points.")
+    parser.add_argument("--seed", type=_positive_int, help="Override the random seed.")
+    parser.add_argument("--adam-epochs", type=_positive_int, help="Override the number of Adam epochs.")
+    parser.add_argument("--lbfgs-iterations", type=_non_negative_int, help="Override the number of L-BFGS iterations.")
+    parser.add_argument("--n-collocation", type=_positive_int, help="Override the number of interior collocation points.")
+    parser.add_argument("--n-boundary", type=_positive_int, help="Override the number of boundary points per edge.")
+    parser.add_argument("--n-initial", type=_positive_int, help="Override the number of initial-condition points.")
+    parser.add_argument("--n-observed", type=_positive_int, help="Override the number of observed data points.")
     parser.add_argument("--output-dir", type=Path, help="Artifact output directory.")
     parser.add_argument(
         "--no-artifacts",
@@ -90,7 +109,10 @@ def build_config(args: argparse.Namespace) -> ProjectConfig:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    config = build_config(args)
+    try:
+        config = build_config(args)
+    except ValidationError as exc:
+        parser.error(str(exc))
     experiment = run_experiment(config)
     summary_json = experiment.summary.model_dump_json(indent=2)
 

@@ -22,8 +22,7 @@ The reference solution is generated analytically with the Cole-Hopf transform an
 
 ## What Is In The Repo
 
-- `src/physical_informed_neural_network/`: core implementation
-- `src/physics_informed_neural_network/`: public package namespace and CLI
+- `src/physics_informed_neural_network/`: the single packaged implementation, public API, and CLI
 - `tests/`: fast automated checks, including an end-to-end smoke test
 - `artifacts/burgers_pinn/`: example outputs from a reference run
 - `notebooks/burgers_equation_pinn.ipynb`: generated exploratory notebook
@@ -59,6 +58,12 @@ Run the default experiment:
 
 ```bash
 burgers-pinn
+```
+
+Run the installed module directly:
+
+```bash
+python -m physics_informed_neural_network --smoke-test
 ```
 
 You can also use the repository entry point without installation:
