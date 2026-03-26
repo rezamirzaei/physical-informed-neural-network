@@ -1,6 +1,15 @@
 # Physics-Informed Neural Network for the 1-D Burgers Equation
 
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![Tests](https://img.shields.io/badge/tests-99%20passed-brightgreen)
+
 Clean, reproducible PyTorch implementation of a Physics-Informed Neural Network (PINN) for the viscous 1-D Burgers equation. The repository is structured as a small research codebase rather than a one-off notebook: packaged source code, a CLI, tests, CI, and example artifacts are all included.
+
+This project includes three complementary neural approaches:
+- **PINN** — physics-constrained optimization on the Burgers equation
+- **Neural Operator (FNO)** — operator learning between function spaces (1-D diffusion & 2-D Darcy flow)
+- **KAN** — interpretable function approximation with learned univariate edge nonlinearities
 
 ![Reference vs PINN prediction](artifacts/burgers_pinn/comparison.png)
 
@@ -20,15 +29,43 @@ with:
 
 The reference solution is generated analytically with the Cole-Hopf transform and used both for sparse observations and evaluation.
 
+## Project Structure
+
+```
+src/physics_informed_neural_network/
+├── __init__.py, cli.py, config.py        # PINN core + CLI
+├── data.py, model.py, physics.py         # Data gen, architecture, PDE residuals
+├── training.py, pipeline.py, plotting.py # Training loop, end-to-end, visualization
+├── presets.py, schemas.py, utils.py      # Presets, Pydantic schemas, utilities
+├── kan/                                  # Kolmogorov-Arnold Network stack
+│   ├── config.py, data.py, model.py      # KAN config, Burgers data, KAN + MLP models
+│   ├── training.py, pipeline.py          # Training with early stopping, experiment pipeline
+│   ├── plotting.py, presets.py, schemas.py
+│   └── (includes MLPBaseline for fair comparison)
+└── neural_operator/                      # Fourier Neural Operator stack
+    ├── config.py, data.py, model.py      # 1-D FNO config, diffusion data, FNO model
+    ├── data_2d.py, model_2d.py           # 2-D Darcy flow data + FNO-2d model
+    ├── training.py, training_2d.py       # 1-D and 2-D training loops
+    ├── pipeline.py, pipeline_2d.py       # 1-D and 2-D experiment pipelines
+    ├── plotting.py, plotting_2d.py       # Publication-quality 1-D and 2-D plots (incl. 3-D surfaces)
+    └── presets.py, schemas.py            # Smoke/tutorial presets, Pydantic schemas
+
+tests/                                    # 99 tests covering all three stacks
+notebooks/                                # Generated tutorial notebooks (3)
+tools/                                    # Notebook generators
+artifacts/                                # Example outputs
+```
+
 ## What Is In The Repo
 
 - `src/physics_informed_neural_network/`: the single packaged implementation, public API, and CLI
-- `src/physics_informed_neural_network/kan/`: reusable KAN stack for exact Burgers regression
-- `tests/`: fast automated checks, including an end-to-end smoke test
+- `src/physics_informed_neural_network/kan/`: reusable KAN stack with MLP baseline and early stopping
+- `src/physics_informed_neural_network/neural_operator/`: 1-D diffusion and 2-D Darcy FNO stacks with 3-D surface plots
+- `tests/`: 99 automated tests, including unit tests for every component and end-to-end smoke tests
 - `artifacts/burgers_pinn/`: example outputs from a reference run
-- `notebooks/burgers_equation_pinn.ipynb`: generated exploratory notebook
-- `notebooks/neural_operator_function_spaces.ipynb`: theory-heavy neural-operator tutorial notebook
-- `notebooks/kolmogorov_arnold_networks_burgers.ipynb`: theory-heavy KAN tutorial notebook
+- `notebooks/burgers_equation_pinn.ipynb`: generated PINN tutorial notebook
+- `notebooks/neural_operator_function_spaces.ipynb`: FNO tutorial (1-D + 2-D Darcy flow)
+- `notebooks/kolmogorov_arnold_networks_burgers.ipynb`: KAN tutorial with MLP comparison
 - `.github/workflows/ci.yml`: GitHub Actions workflow for install + test + notebook generation
 
 ## Method
@@ -103,20 +140,21 @@ where each edge function $\phi_{j,i}$ is learned from data. In this repository, 
 - a learned **piecewise-linear spline**
 - explicit coordinate normalization so the spline domain is stable and inspectable
 
-Why this matters:
+**Key features of the KAN stack:**
 
-- it gives a more **interpretable** nonlinear structure than a standard MLP
-- it matches the **Kolmogorov-Arnold** perspective of composing multivariate functions from univariate pieces
-- it is well suited to **low-dimensional scientific regression**, where inspecting learned response curves is useful
+- **Early stopping** with best-model restore (configurable patience and min_delta)
+- **MLP baseline** with matched parameter count for fair comparison
+- **3-D surface plots** for publication-quality visualization
+- **Pointwise error heatmaps** and **KAN-vs-MLP side-by-side comparison figures**
+- Pydantic-validated configuration with smoke-test and tutorial presets
 
-The KAN notebook, `notebooks/kolmogorov_arnold_networks_burgers.ipynb`, is intentionally different from the PINN and neural-operator tutorials.
+The KAN notebook, `notebooks/kolmogorov_arnold_networks_burgers.ipynb`, covers:
 
-It does **not** train a physics-informed model. Instead, it isolates the approximation problem:
-
-- train a spline-edge KAN on coarse samples of the exact Burgers field
-- evaluate on a finer unseen grid
-- inspect first-layer learned edge functions for the normalized $(x,t)$ inputs
-- verify the learned surrogate with both regression metrics and Burgers PDE residual checks
+- Training a spline-edge KAN on coarse samples of the exact Burgers field
+- Evaluating on a finer unseen grid
+- Inspecting first-layer learned edge functions for the normalized $(x,t)$ inputs
+- Verifying the learned surrogate with both regression metrics and Burgers PDE residual checks
+- **Training a matched-parameter MLP baseline and comparing KAN vs MLP predictions**
 
 That makes the KAN tutorial a good complement to the rest of the repo:
 
@@ -200,13 +238,13 @@ With an activated virtualenv:
 pytest -q
 ```
 
-The test suite includes:
+The test suite (99 tests) includes:
 
-- configuration validation
-- reference-solution and sampler shape checks
-- an end-to-end smoke run of the training pipeline
-- neural-operator solver, model-shape, and smoke-experiment checks
-- KAN basis, model-shape, and smoke-experiment checks
+- **PINN**: FourierFeatureEmbedding, ResidualBlock, BurgersPINN, AdaptiveLossWeights, BurgersResidual, end-to-end pipeline smoke test
+- **KAN**: PiecewiseLinearBasis, CoordinateNormalizer, TensorNormalizer, KANLayer, KolmogorovArnoldNetwork, MLPBaseline, metrics, dataset properties, config validation, early stopping, all plotting functions
+- **Neural Operator 1-D**: TensorNormalizer, SpectralConv1d, OperatorSample, error metrics, Dirichlet solver, resolution transfer, end-to-end pipeline
+- **Neural Operator 2-D**: GRF sampling, Darcy solver (boundary, positivity, symmetry), TensorNormalizer2d, SpectralConv2d, FNO-2d shapes, dataset properties, end-to-end pipeline
+- Configuration validation and reference-solution shape checks
 
 ## Example Outputs
 
