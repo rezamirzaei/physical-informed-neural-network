@@ -40,6 +40,17 @@ The reference solution is generated analytically with the Cole-Hopf transform an
 
 ## Installation
 
+Recommended with `uv`:
+
+```bash
+uv sync --extra dev
+```
+
+This repository now includes a checked-in `uv.lock` and platform-aware dependency markers.
+On Intel macOS, `uv` will resolve to `torch 2.2.2` and `numpy 1.26.x` because newer Torch releases do not ship `macOS x86_64` wheels.
+
+`pip` remains supported:
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -73,6 +84,12 @@ You can also use the repository entry point without installation:
 python main.py --smoke-test
 ```
 
+Run through `uv` without manually activating an environment:
+
+```bash
+uv run burgers-pinn --smoke-test
+```
+
 Useful flags:
 
 ```bash
@@ -82,6 +99,14 @@ burgers-pinn --output-dir artifacts/custom_run
 ```
 
 ## Testing
+
+With `uv`:
+
+```bash
+uv run pytest -q
+```
+
+With an activated virtualenv:
 
 ```bash
 pytest -q
@@ -106,6 +131,13 @@ The repository includes a sample run in `artifacts/burgers_pinn/`:
 ## Notebook
 
 The notebooks are generated from code so that the narrative view stays consistent with the package implementation:
+
+```bash
+uv run python tools/generate_notebook.py
+uv run python tools/generate_neural_operator_notebook.py
+```
+
+Equivalent commands inside an activated virtualenv:
 
 ```bash
 python tools/generate_notebook.py
