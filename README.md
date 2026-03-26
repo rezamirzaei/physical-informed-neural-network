@@ -23,10 +23,12 @@ The reference solution is generated analytically with the Cole-Hopf transform an
 ## What Is In The Repo
 
 - `src/physics_informed_neural_network/`: the single packaged implementation, public API, and CLI
+- `src/physics_informed_neural_network/kan/`: reusable KAN stack for exact Burgers regression
 - `tests/`: fast automated checks, including an end-to-end smoke test
 - `artifacts/burgers_pinn/`: example outputs from a reference run
 - `notebooks/burgers_equation_pinn.ipynb`: generated exploratory notebook
 - `notebooks/neural_operator_function_spaces.ipynb`: theory-heavy neural-operator tutorial notebook
+- `notebooks/kolmogorov_arnold_networks_burgers.ipynb`: theory-heavy KAN tutorial notebook
 - `.github/workflows/ci.yml`: GitHub Actions workflow for install + test + notebook generation
 
 ## Method
@@ -78,6 +80,51 @@ with randomly generated smooth coefficient and forcing functions. The tutorial i
 - spectral error analysis and PDE-residual checks on predictions
 
 The reusable implementation lives under `src/physics_informed_neural_network/neural_operator/`, and the notebook is generated from code so the theory walkthrough stays aligned with the library implementation.
+
+## KAN
+
+This repository also includes a **Kolmogorov-Arnold Network (KAN)** tutorial built around the exact Burgers solution.
+
+A KAN replaces fixed scalar edge weights with **learned univariate functions**. Instead of a dense layer computing
+
+$$
+y = W x + b,
+$$
+
+the KAN viewpoint is closer to
+
+$$
+y_j = \sum_i \phi_{j,i}(x_i),
+$$
+
+where each edge function $\phi_{j,i}$ is learned from data. In this repository, those edge functions are implemented as a combination of:
+
+- a simple base activation path
+- a learned **piecewise-linear spline**
+- explicit coordinate normalization so the spline domain is stable and inspectable
+
+Why this matters:
+
+- it gives a more **interpretable** nonlinear structure than a standard MLP
+- it matches the **Kolmogorov-Arnold** perspective of composing multivariate functions from univariate pieces
+- it is well suited to **low-dimensional scientific regression**, where inspecting learned response curves is useful
+
+The KAN notebook, `notebooks/kolmogorov_arnold_networks_burgers.ipynb`, is intentionally different from the PINN and neural-operator tutorials.
+
+It does **not** train a physics-informed model. Instead, it isolates the approximation problem:
+
+- train a spline-edge KAN on coarse samples of the exact Burgers field
+- evaluate on a finer unseen grid
+- inspect first-layer learned edge functions for the normalized $(x,t)$ inputs
+- verify the learned surrogate with both regression metrics and Burgers PDE residual checks
+
+That makes the KAN tutorial a good complement to the rest of the repo:
+
+- the **PINN** section is about enforcing physics during optimization
+- the **neural operator** section is about learning maps between function spaces
+- the **KAN** section is about interpretable scalar function approximation with learned univariate edge nonlinearities
+
+The reusable implementation lives under `src/physics_informed_neural_network/kan/`, and the notebook is generated from code so the theory and the implementation stay aligned.
 
 ## Installation
 
@@ -159,6 +206,7 @@ The test suite includes:
 - reference-solution and sampler shape checks
 - an end-to-end smoke run of the training pipeline
 - neural-operator solver, model-shape, and smoke-experiment checks
+- KAN basis, model-shape, and smoke-experiment checks
 
 ## Example Outputs
 
@@ -177,6 +225,7 @@ The notebooks are generated from code so that the narrative view stays consisten
 ```bash
 uv run python tools/generate_notebook.py
 uv run python tools/generate_neural_operator_notebook.py
+uv run python tools/generate_kan_notebook.py
 ```
 
 Equivalent commands inside an activated virtualenv:
@@ -184,6 +233,7 @@ Equivalent commands inside an activated virtualenv:
 ```bash
 python tools/generate_notebook.py
 python tools/generate_neural_operator_notebook.py
+python tools/generate_kan_notebook.py
 ```
 
 ## Shareability Checklist
@@ -203,6 +253,7 @@ This project is reasonable to publish on GitHub now because it has:
 2. Tancik, M., et al. (2020). Fourier features let networks learn high frequency functions in low dimensional domains. *NeurIPS*.
 3. Wang, S., Teng, Y., and Perdikaris, P. (2021). Understanding and mitigating gradient flow pathologies in physics-informed neural networks. *SIAM Journal on Scientific Computing*.
 4. Kovachki, N., et al. (2023). Neural operator: Learning maps between function spaces. *Journal of Machine Learning Research*, 24(89), 1-97.
+5. Liu, Z., et al. (2024). KAN: Kolmogorov-Arnold networks. *arXiv preprint arXiv:2404.19756*.
 
 ## License
 

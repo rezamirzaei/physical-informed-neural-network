@@ -22,3 +22,4 @@ jobs:
         run: |
           python tools/generate_notebook.py
           python tools/generate_neural_operator_notebook.py
+          python tools/generate_kan_notebook.py
