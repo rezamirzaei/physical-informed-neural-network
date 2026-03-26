@@ -38,6 +38,47 @@ The reference solution is generated analytically with the Cole-Hopf transform an
 - Latin Hypercube sampling for collocation points
 - Pydantic-validated configuration objects for experiment settings
 
+## Neural Operator
+
+This repository now also includes a neural-operator tutorial, not just a PINN example.
+
+A **neural operator** learns a map between function spaces instead of a map between fixed-length vectors. In practical terms, the goal is to learn
+
+$$
+G^\dagger : (a(x), f(x)) \mapsto u(x),
+$$
+
+where the input is itself one or more functions and the output is another function. That is different from a standard neural network that expects a single discretized vector at one fixed resolution.
+
+The neural-operator tutorial in this repo focuses on a **Fourier neural operator (FNO)**. The idea is:
+
+- lift pointwise input channels into a higher-dimensional latent representation
+- apply nonlocal mixing in Fourier space on the low-frequency modes
+- combine that spectral operator with a local linear path
+- project the latent field back to the target solution field
+
+Why this matters:
+
+- it is an **operator-learning** view of PDEs, not just pointwise regression
+- the same learned model can often be evaluated on **different grid resolutions**
+- Fourier-space parameterization gives an efficient way to model long-range interactions
+
+The included notebook, `notebooks/neural_operator_function_spaces.ipynb`, makes this concrete using the 1-D variable-coefficient diffusion problem
+
+$$
+-\left(a(x)u'(x)\right)' = f(x), \qquad u(0)=u(1)=0,
+$$
+
+with randomly generated smooth coefficient and forcing functions. The tutorial is designed to show all the important parts:
+
+- the operator-learning formulation from the neural-operator literature
+- the difference between PINNs and neural operators
+- an exact 1-D solution formula used to generate verified supervision data
+- native-resolution evaluation and zero-shot finer-grid transfer
+- spectral error analysis and PDE-residual checks on predictions
+
+The reusable implementation lives under `src/physics_informed_neural_network/neural_operator/`, and the notebook is generated from code so the theory walkthrough stays aligned with the library implementation.
+
 ## Installation
 
 Recommended with `uv`:
@@ -117,6 +158,7 @@ The test suite includes:
 - configuration validation
 - reference-solution and sampler shape checks
 - an end-to-end smoke run of the training pipeline
+- neural-operator solver, model-shape, and smoke-experiment checks
 
 ## Example Outputs
 
@@ -160,6 +202,7 @@ This project is reasonable to publish on GitHub now because it has:
 1. Raissi, M., Perdikaris, P., and Karniadakis, G. E. (2019). Physics-informed neural networks. *Journal of Computational Physics*, 378, 686-707.
 2. Tancik, M., et al. (2020). Fourier features let networks learn high frequency functions in low dimensional domains. *NeurIPS*.
 3. Wang, S., Teng, Y., and Perdikaris, P. (2021). Understanding and mitigating gradient flow pathologies in physics-informed neural networks. *SIAM Journal on Scientific Computing*.
+4. Kovachki, N., et al. (2023). Neural operator: Learning maps between function spaces. *Journal of Machine Learning Research*, 24(89), 1-97.
 
 ## License
 
