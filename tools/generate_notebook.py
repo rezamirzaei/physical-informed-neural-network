@@ -79,6 +79,7 @@ from physics_informed_neural_network.plotting import (
     plot_loss_history,
     plot_pointwise_error,
     plot_reference_solution,
+    plot_residual_distribution,
     plot_time_slices,
 )
 
@@ -155,8 +156,30 @@ fig_err"""
     cells.append(nbf.v4.new_code_cell("fig_loss = plot_loss_history(experiment.history)\nfig_loss"))
     cells.append(nbf.v4.new_code_cell("display(experiment.history.to_frame().tail(5))"))
 
+    # ---- PDE Residual Distribution ----
+    cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 7 — PDE Residual Analysis
+
+How well does the trained PINN satisfy the Burgers equation at interior points?
+
+The pipeline automatically evaluates the PDE residual $r = u_t + u \\cdot u_x - \\nu\\, u_{xx}$ on 5,000 fresh interior collocation points and saves the distribution as an artifact.
+"""
+        )
+    )
+    cells.append(
+        nbf.v4.new_code_cell(
+            """from IPython.display import Image
+residual_path = experiment.artifact_paths.get("residual_plot")
+if residual_path and residual_path.exists():
+    display(Image(filename=str(residual_path), width=800))
+else:
+    print("Residual plot not found — run with save_artifacts=True")"""
+        )
+    )
+
     # ---- Summary ----
-    cells.append(nbf.v4.new_markdown_cell("## 7 — Summary and Artifacts"))
+    cells.append(nbf.v4.new_markdown_cell("## 8 — Summary and Artifacts"))
     cells.append(nbf.v4.new_code_cell("display(experiment.summary.model_dump())"))
 
     cells.append(
@@ -165,6 +188,29 @@ fig_err"""
     {"artifact": k, "path": str(v)} for k, v in experiment.artifact_paths.items()
 ])
 display(artifact_df)"""
+        )
+    )
+
+    # ---- Interpretation ----
+    cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 9 — Interpretation
+
+### What this notebook demonstrates
+
+- **Physics-informed learning**: the network is trained to satisfy the Burgers PDE, boundary conditions, initial conditions, and sparse observations simultaneously
+- **Cole-Hopf reference**: the exact analytical solution provides a rigorous ground truth
+- **Two-phase optimization**: Adam for broad exploration, L-BFGS for fine-tuning near convergence
+- **Fourier features**: random Fourier feature encoding helps the network represent high-frequency structure
+
+### Key metrics to watch
+
+| Metric | Good | Excellent |
+|--------|------|-----------|
+| Relative $L^2$ error | $< 5\\%$ | $< 1\\%$ |
+| Max absolute error | $< 0.1$ | $< 0.01$ |
+| PDE residual (mean) | $< 10^{-3}$ | $< 10^{-4}$ |
+"""
         )
     )
 

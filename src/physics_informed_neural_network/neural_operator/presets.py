@@ -126,12 +126,12 @@ def apply_darcy_tutorial_preset(
     """Notebook-friendly 2-D Darcy preset with moderate training cost."""
     config = config.model_copy(deep=True)
 
-    config.data.train_samples = 400
-    config.data.validation_samples = 100
-    config.data.test_samples = 100
-    config.data.grf_resolution = 85
+    config.data.train_samples = 200
+    config.data.validation_samples = 50
+    config.data.test_samples = 50
+    config.data.grf_resolution = 61
     config.data.train_resolution = 29
-    config.data.evaluation_resolution = 57
+    config.data.evaluation_resolution = 43
 
     config.model.width = 32
     config.model.modes_x = 12
@@ -157,4 +157,5 @@ def apply_darcy_tutorial_preset(
 def build_darcy_tutorial_config(output_dir: str | Path | None = None) -> DarcyExperimentConfig:
     """Create a fresh 2-D Darcy tutorial configuration."""
     return apply_darcy_tutorial_preset(DarcyExperimentConfig(), output_dir=output_dir)
+
 

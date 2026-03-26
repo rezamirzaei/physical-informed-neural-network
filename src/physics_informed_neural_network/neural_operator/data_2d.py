@@ -87,6 +87,10 @@ def solve_darcy_2d(
 ) -> np.ndarray:
     """Solve the 2-D Darcy equation on an interior grid using a 5-point FD stencil.
 
+    Assembles ``-∇·(a ∇u) = f`` with homogeneous Dirichlet BCs using
+    face-averaged diffusivities and a fully vectorized sparse matrix
+    construction (no Python loops over grid points).
+
     Parameters
     ----------
     diffusivity : (N, N) coefficient field (including boundary)
@@ -97,66 +101,67 @@ def solve_darcy_2d(
     -------
     solution    : (N, N) with boundary values set to zero
     """
+    from scipy.sparse import coo_matrix
+
     N = diffusivity.shape[0]
-    n = N - 2  # interior points
+    n = N - 2  # interior points per axis
     if n < 1:
         return np.zeros_like(forcing)
 
-    # Build the interior system: -∇·(a ∇u) = f
-    # Use harmonic average of diffusivity at cell faces for better accuracy
+    nn = n * n
+    h2 = h * h
     a = diffusivity
+
+    # Face-averaged diffusivities on the interior grid
+    a_e = 0.5 * (a[1:-1, 1:-1] + a[1:-1, 2:])    # east  (i, j+1)
+    a_w = 0.5 * (a[1:-1, 1:-1] + a[1:-1, :-2])    # west  (i, j-1)
+    a_n = 0.5 * (a[1:-1, 1:-1] + a[2:, 1:-1])     # north (i+1, j)
+    a_s = 0.5 * (a[1:-1, 1:-1] + a[:-2, 1:-1])    # south (i-1, j)
+
+    # Flat row indices for interior unknowns: idx = i*n + j
+    ii, jj = np.meshgrid(np.arange(n), np.arange(n), indexing="ij")
+    idx = (ii * n + jj).ravel()
+
+    rows, cols, vals = [], [], []
+
+    # Diagonal (centre coefficient)
+    centre = (a_e + a_w + a_n + a_s).ravel() / h2
+    rows.append(idx)
+    cols.append(idx)
+    vals.append(centre)
+
+    # East neighbour (j+1): only where j+1 < n
+    mask_e = (jj < n - 1).ravel()
+    rows.append(idx[mask_e])
+    cols.append(idx[mask_e] + 1)
+    vals.append(-a_e.ravel()[mask_e] / h2)
+
+    # West neighbour (j-1): only where j > 0
+    mask_w = (jj > 0).ravel()
+    rows.append(idx[mask_w])
+    cols.append(idx[mask_w] - 1)
+    vals.append(-a_w.ravel()[mask_w] / h2)
+
+    # North neighbour (i+1): only where i+1 < n
+    mask_n = (ii < n - 1).ravel()
+    rows.append(idx[mask_n])
+    cols.append(idx[mask_n] + n)
+    vals.append(-a_n.ravel()[mask_n] / h2)
+
+    # South neighbour (i-1): only where i > 0
+    mask_s = (ii > 0).ravel()
+    rows.append(idx[mask_s])
+    cols.append(idx[mask_s] - n)
+    vals.append(-a_s.ravel()[mask_s] / h2)
+
+    row_all = np.concatenate(rows)
+    col_all = np.concatenate(cols)
+    val_all = np.concatenate(vals)
+
+    A = coo_matrix((val_all, (row_all, col_all)), shape=(nn, nn)).tocsc()
     rhs = forcing[1:-1, 1:-1].ravel()
 
-    # Coefficient arrays for the 5-point stencil on interior (n x n) grid
-    # a_e, a_w, a_n, a_s are face-averaged diffusivities
-    a_e = 0.5 * (a[1:-1, 1:-1] + a[1:-1, 2:])
-    a_w = 0.5 * (a[1:-1, 1:-1] + a[1:-1, :-2])
-    a_n = 0.5 * (a[1:-1, 1:-1] + a[2:, 1:-1])
-    a_s = 0.5 * (a[1:-1, 1:-1] + a[:-2, 1:-1])
-
-    center = (a_e + a_w + a_n + a_s).ravel() / h ** 2
-    east = (-a_e[:, :-1]).ravel() / h ** 2
-    west = (-a_w[:, 1:]).ravel() / h ** 2
-    north = (-a_n[:-1, :]).ravel() / h ** 2
-    south = (-a_s[1:, :]).ravel() / h ** 2
-
-    nn = n * n
-    diag_data = [center]
-    offsets = [0]
-
-    # East/west neighbours: offset ±1 with row-boundary zeros
-    if len(east) > 0:
-        diag_data.append(east)
-        offsets.append(1)
-    if len(west) > 0:
-        diag_data.append(west)
-        offsets.append(-1)
-    # North/south neighbours: offset ±n
-    if len(north) > 0:
-        diag_data.append(north)
-        offsets.append(n)
-    if len(south) > 0:
-        diag_data.append(south)
-        offsets.append(-n)
-
-    # Build the sparse matrix
-    from scipy.sparse import lil_matrix
-
-    A = lil_matrix((nn, nn), dtype=np.float64)
-    for i in range(n):
-        for j in range(n):
-            idx = i * n + j
-            A[idx, idx] = (a_e[i, j] + a_w[i, j] + a_n[i, j] + a_s[i, j]) / h ** 2
-            if j + 1 < n:
-                A[idx, idx + 1] = -a_e[i, j] / h ** 2
-            if j - 1 >= 0:
-                A[idx, idx - 1] = -a_w[i, j] / h ** 2
-            if i + 1 < n:
-                A[idx, idx + n] = -a_n[i, j] / h ** 2
-            if i - 1 >= 0:
-                A[idx, idx - n] = -a_s[i, j] / h ** 2
-
-    u_interior = spsolve(A.tocsc(), rhs)
+    u_interior = spsolve(A, rhs)
     solution = np.zeros((N, N), dtype=np.float64)
     solution[1:-1, 1:-1] = u_interior.reshape(n, n)
     return solution
@@ -185,6 +190,13 @@ class DarcyDataset:
     diffusivity: np.ndarray  # (n_samples, N, N)
     forcing: np.ndarray      # (n_samples, N, N)
     solution: np.ndarray     # (n_samples, N, N)
+
+    def __post_init__(self) -> None:
+        n = self.n_samples
+        r = self.resolution
+        for name, arr in [("diffusivity", self.diffusivity), ("forcing", self.forcing), ("solution", self.solution)]:
+            if arr.shape != (n, r, r):
+                raise ValueError(f"{name} shape {arr.shape} != expected ({n}, {r}, {r})")
 
     @property
     def n_samples(self) -> int:
@@ -266,6 +278,8 @@ def _generate_darcy_data(
     solution = np.empty_like(diffusivity)
     for i in range(n_samples):
         solution[i] = solve_darcy_2d(diffusivity[i], forcing[i], h)
+        if n_samples >= 50 and (i + 1) % max(n_samples // 5, 1) == 0:
+            print(f"    Solved {i + 1}/{n_samples} Darcy systems …")
 
     return diffusivity, forcing, solution
 
@@ -327,5 +341,8 @@ def build_darcy_splits(config: DarcyExperimentConfig) -> DarcyDatasetSplits:
             config.data.evaluation_resolution, config.problem,
         ),
     )
+
+
+
 
 
