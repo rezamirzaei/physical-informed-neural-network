@@ -456,6 +456,191 @@ For a faster sanity check, replace `build_tutorial_config()` with `build_smoke_t
         )
     )
 
+    # -----------------------------------------------------------------------
+    # 2-D Darcy flow section
+    # -----------------------------------------------------------------------
+
+    cells.append(
+        nbf.v4.new_markdown_cell(
+            """---
+
+# Part II — 2-D Darcy Flow
+
+The second half of this notebook extends the operator-learning story to **two spatial dimensions** using the classic Darcy-flow problem:
+
+$$
+-\\nabla \\cdot \\big(a(x,y)\\,\\nabla u(x,y)\\big) = f(x,y), \\quad (x,y) \\in (0,1)^2, \\quad u\\big|_{\\partial\\Omega} = 0.
+$$
+
+This problem is widely used as a benchmark in the neural-operator literature because:
+
+- it involves a **heterogeneous** 2-D diffusivity field $a(x,y)$
+- the solution $u(x,y)$ depends **nonlocally** on $a$ through the elliptic inverse operator
+- it tests whether the FNO architecture generalizes from 1-D to 2-D
+
+We use the FNO-2d variant with 2-D spectral convolutions, coordinate augmentation, and the same lift → spectral blocks → project architecture.
+"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """from physics_informed_neural_network.neural_operator.pipeline_2d import run_darcy_experiment
+from physics_informed_neural_network.neural_operator.data_2d import build_darcy_splits
+from physics_informed_neural_network.neural_operator.plotting_2d import (
+    plot_darcy_3d_surface,
+    plot_darcy_cross_sections,
+    plot_darcy_dataset_examples,
+    plot_darcy_error_distribution,
+    plot_darcy_prediction_comparison,
+    plot_darcy_resolution_metrics,
+)
+from physics_informed_neural_network.neural_operator.presets import (
+    build_darcy_tutorial_config,
+    build_darcy_smoke_test_config,
+)"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 11 — 2-D Darcy Configuration and Data
+
+The 2-D Darcy pipeline mirrors the 1-D stack: Pydantic configs define the problem, a GRF sampler generates
+random diffusivity fields, a finite-difference solver produces exact solutions, and the FNO-2d model
+learns the $(a, f) \\mapsto u$ operator.
+"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """darcy_config = build_darcy_tutorial_config(
+    output_dir=PROJECT_ROOT / "artifacts" / "notebook_darcy"
+)
+display(darcy_config.model_dump())"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """darcy_splits = build_darcy_splits(darcy_config)
+darcy_dataset_frame = pd.DataFrame([
+    {"split": "train", "samples": darcy_splits.train.n_samples, "resolution": darcy_splits.train.resolution},
+    {"split": "validation", "samples": darcy_splits.validation.n_samples, "resolution": darcy_splits.validation.resolution},
+    {"split": "test", "samples": darcy_splits.test.n_samples, "resolution": darcy_splits.test.resolution},
+    {"split": "refined_test", "samples": darcy_splits.refined_test.n_samples, "resolution": darcy_splits.refined_test.resolution},
+])
+display(darcy_dataset_frame)"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """fig_darcy_examples = plot_darcy_dataset_examples(darcy_splits.train, sample_indices=(0, 1, 2))
+fig_darcy_examples"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 12 — Train the 2-D FNO"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """darcy_experiment = run_darcy_experiment(darcy_config)"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """darcy_summary = pd.DataFrame([darcy_experiment.summary.model_dump()])
+display(darcy_summary)"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 13 — 2-D Prediction Quality
+
+The key figure: diffusivity input → exact solution → FNO prediction → absolute error map (log scale).
+"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """darcy_test_sample = darcy_splits.test.sample(0)
+fig_darcy_pred = plot_darcy_prediction_comparison(
+    darcy_test_sample,
+    darcy_experiment.native_prediction[0],
+    title="2-D Darcy: FNO prediction vs exact solution",
+)
+fig_darcy_pred"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """fig_darcy_3d = plot_darcy_3d_surface(
+    darcy_test_sample,
+    darcy_experiment.native_prediction[0],
+    title="2-D Darcy — 3-D surface comparison",
+)
+fig_darcy_3d"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """fig_darcy_cross = plot_darcy_cross_sections(
+    darcy_test_sample,
+    darcy_experiment.native_prediction[0],
+)
+fig_darcy_cross"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 14 — 2-D Error Distribution and Resolution Transfer"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """fig_darcy_error = plot_darcy_error_distribution(
+    darcy_experiment.native_prediction,
+    darcy_splits.test.solution,
+    title="2-D Darcy: per-sample relative $L^2$ error distribution",
+)
+fig_darcy_error"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """fig_darcy_res = plot_darcy_resolution_metrics(darcy_experiment.summary)
+fig_darcy_res"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 15 — Summary
+
+This notebook demonstrated operator learning across both 1-D and 2-D problems:
+
+- **1-D diffusion**: exact operator formula, FNO-1d, resolution transfer, spectral analysis
+- **2-D Darcy flow**: GRF-based data, FNO-2d, 3-D surface visualization, cross-section comparison
+
+The same architectural principles — Fourier-space mixing, local linear paths, discretization-aware design — apply to both cases, and the library code is structured to make that reuse clean and testable.
+"""
+        )
+    )
+
     notebook.cells = cells
     return notebook
 
