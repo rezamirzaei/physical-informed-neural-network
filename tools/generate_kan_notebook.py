@@ -143,13 +143,18 @@ from physics_informed_neural_network.kan.data import build_dataset_splits
 from physics_informed_neural_network.kan.pipeline import run_kan_experiment
 from physics_informed_neural_network.kan.plotting import (
     apply_plot_style,
+    plot_3d_surface,
     plot_edge_functions,
+    plot_kan_vs_mlp_comparison,
+    plot_pointwise_error_heatmap,
     plot_residual_distribution,
     plot_solution_comparison,
     plot_time_slices,
     plot_training_history,
 )
 from physics_informed_neural_network.kan.presets import build_smoke_test_config, build_tutorial_config
+from physics_informed_neural_network.kan.model import MLPBaseline
+from physics_informed_neural_network.kan.training import KANTrainer, compute_error_metrics
 
 apply_plot_style()
 pd.set_option("display.float_format", lambda value: f"{value:,.6f}")"""
@@ -302,7 +307,40 @@ fig_edges"""
 
     cells.append(
         nbf.v4.new_markdown_cell(
-            """## 10 — Interpreting the Learned Structure
+            """## 10 — 3-D Surface Visualization
+
+The 2-D heatmaps above are standard. A 3-D surface view makes the shock-front structure
+more visually obvious and gives a clearer impression of how the KAN smoothly interpolates
+through the nonlinear Burgers dynamics.
+"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """fig_3d = plot_3d_surface(
+    experiment.datasets.evaluation,
+    experiment.evaluation_prediction,
+    title="Burgers field — 3-D KAN surface vs exact solution",
+)
+fig_3d"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """fig_error_heatmap = plot_pointwise_error_heatmap(
+    experiment.datasets.evaluation,
+    experiment.evaluation_prediction,
+    title="KAN pointwise absolute error",
+)
+fig_error_heatmap"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 11 — Interpreting the Learned Structure
 
 Typical patterns to look for:
 
@@ -317,7 +355,65 @@ These plots do not fully explain the whole network, but they make the first comp
 
     cells.append(
         nbf.v4.new_markdown_cell(
-            """## 11 — Limits and Honest Takeaways
+            """## 12 — MLP Baseline: Fair Comparison
+
+To really evaluate KANs we need a baseline. Here we train a standard MLP with a comparable
+number of parameters on exactly the same data and compare prediction quality.
+
+This is the only fair way to determine whether the KAN's spline-edge architecture
+offers a genuine advantage for this particular problem.
+"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """# Build an MLP with approximately the same parameter count as the KAN
+kan_params = experiment.model.count_parameters()
+mlp_model = MLPBaseline(input_dim=2, hidden_dim=24, depth=3, activation="silu")
+print(f"KAN parameters:  {kan_params:,}")
+print(f"MLP parameters:  {mlp_model.count_parameters():,}")
+
+# Train MLP using the same trainer infrastructure
+mlp_trainer = KANTrainer(
+    model=mlp_model,
+    config=config.optimization,
+    device=torch.device("cpu"),
+    coordinate_normalizer=experiment.datasets.train.normalizer,
+)
+mlp_history = mlp_trainer.fit(experiment.datasets.train, experiment.datasets.validation)
+mlp_eval_pred = mlp_trainer.predict_dataset(experiment.datasets.evaluation)
+mlp_eval_grid = experiment.datasets.evaluation.reshape_prediction(mlp_eval_pred)
+
+mlp_metrics = compute_error_metrics(mlp_eval_pred, experiment.datasets.evaluation.solution.ravel())
+kan_metrics = experiment.summary.evaluation_metrics
+
+comparison = pd.DataFrame({
+    "Model": ["KAN", "MLP"],
+    "Parameters": [kan_params, mlp_model.count_parameters()],
+    "Relative L²": [kan_metrics.relative_l2, mlp_metrics.relative_l2],
+    "MSE": [kan_metrics.mse, mlp_metrics.mse],
+    "MAE": [kan_metrics.mae, mlp_metrics.mae],
+    "Max Error": [kan_metrics.max_absolute_error, mlp_metrics.max_absolute_error],
+})
+display(comparison)"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_code_cell(
+            """fig_compare = plot_kan_vs_mlp_comparison(
+    experiment.datasets.evaluation,
+    experiment.evaluation_prediction,
+    mlp_eval_grid,
+)
+fig_compare"""
+        )
+    )
+
+    cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 13 — Limits and Honest Takeaways
 
 This notebook demonstrates what KANs are good at in a scientific-computing workflow:
 
