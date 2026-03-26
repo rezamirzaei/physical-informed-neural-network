@@ -20,13 +20,16 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 dependencies = [
+    "ipython>=9.10.0",
     "matplotlib>=3.10",
     "nbformat>=5.10",
-    "numpy>=1.26",
+    "numpy>=1.26,<2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "numpy>=1.26; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     "pandas>=2.2",
     "pydantic>=2.12",
     "scipy>=1.12",
-    "torch>=2.2",
+    "torch>=2.2,<2.3; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "torch>=2.2; sys_platform != 'darwin' or platform_machine != 'x86_64'",
 ]
 
 [project.optional-dependencies]
@@ -43,6 +46,11 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["physics_informed_neural_network*"]
+
+[tool.uv]
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
