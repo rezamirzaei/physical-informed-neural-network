@@ -68,6 +68,8 @@ def apply_tutorial_preset(
     config.optimization.scheduler_step = 70
     config.optimization.scheduler_gamma = 0.65
     config.optimization.log_every = 20
+    config.optimization.patience = 30
+    config.optimization.min_delta = 1e-7
 
     config.artifacts.save_artifacts = False
     config.artifacts.output_dir = Path(output_dir) if output_dir is not None else Path("artifacts/kan_tutorial")

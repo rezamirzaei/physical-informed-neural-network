@@ -139,6 +139,12 @@ class KANTrainer:
             gamma=self.config.scheduler_gamma,
         )
 
+        # Early-stopping state
+        best_val_loss = float("inf")
+        best_state_dict: dict | None = None
+        patience_counter = 0
+        use_early_stopping = self.config.patience > 0
+
         for epoch in range(1, self.config.epochs + 1):
             self.model.train()
             running_loss = 0.0
@@ -182,7 +188,23 @@ class KANTrainer:
                     f"val_mse={validation_metrics.mse:.6f}"
                 )
 
+            # Early-stopping check
+            if use_early_stopping:
+                if validation_metrics.mse < best_val_loss - self.config.min_delta:
+                    best_val_loss = validation_metrics.mse
+                    best_state_dict = {k: v.clone() for k, v in self.model.state_dict().items()}
+                    patience_counter = 0
+                else:
+                    patience_counter += 1
+                    if patience_counter >= self.config.patience:
+                        print(f"  [KAN] Early stopping at epoch {epoch} (patience={self.config.patience})")
+                        break
+
             scheduler.step()
+
+        # Restore best model if early stopping was active
+        if use_early_stopping and best_state_dict is not None:
+            self.model.load_state_dict(best_state_dict)
 
         return self.history
 

@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 — registers 3-D projection
 
 from .data import BurgersGridDataset
 
@@ -158,3 +159,100 @@ def plot_residual_distribution(residuals: np.ndarray) -> Figure:
 
     fig.tight_layout()
     return fig
+
+
+def plot_3d_surface(
+    dataset: BurgersGridDataset,
+    prediction: np.ndarray,
+    title: str = "Burgers field — 3-D surface comparison",
+) -> Figure:
+    """Render exact solution, KAN prediction, and absolute error as 3-D surface plots."""
+    grid_x, grid_t = dataset.mesh()
+    truth = dataset.solution
+    error = np.abs(prediction - truth)
+
+    fig = plt.figure(figsize=(20, 5.5))
+    panels = [
+        (truth, "Exact solution $u(x,t)$", "RdBu_r"),
+        (prediction, "KAN prediction $\\hat{u}(x,t)$", "RdBu_r"),
+        (error, "Absolute error $|u - \\hat{u}|$", "magma"),
+    ]
+    for idx, (field, label, cmap) in enumerate(panels):
+        ax = fig.add_subplot(1, 3, idx + 1, projection="3d")
+        ax.plot_surface(grid_x, grid_t, field, cmap=cmap, edgecolor="none", alpha=0.92, rcount=80, ccount=80)
+        ax.set_xlabel("$x$", labelpad=8)
+        ax.set_ylabel("$t$", labelpad=8)
+        ax.set_zlabel("$u$", labelpad=6)
+        ax.set_title(label, fontsize=12, pad=12)
+        ax.view_init(elev=28, azim=-55)
+
+    fig.suptitle(title, fontsize=15, fontweight="bold", y=1.02)
+    fig.tight_layout()
+    return fig
+
+
+def plot_kan_vs_mlp_comparison(
+    dataset: BurgersGridDataset,
+    kan_prediction: np.ndarray,
+    mlp_prediction: np.ndarray,
+    kan_label: str = "KAN",
+    mlp_label: str = "MLP",
+) -> Figure:
+    """Side-by-side comparison of KAN and MLP predictions on the same evaluation grid."""
+    truth = dataset.solution
+    kan_error = np.abs(kan_prediction - truth)
+    mlp_error = np.abs(mlp_prediction - truth)
+    extent = [dataset.x[0], dataset.x[-1], dataset.t[0], dataset.t[-1]]
+
+    vmin_u = min(truth.min(), kan_prediction.min(), mlp_prediction.min())
+    vmax_u = max(truth.max(), kan_prediction.max(), mlp_prediction.max())
+    vmax_e = max(kan_error.max(), mlp_error.max())
+
+    fig, axes = plt.subplots(2, 3, figsize=(18, 9), sharex=True, sharey=True)
+
+    # Row 0: predictions
+    for ax, (field, label) in zip(
+        axes[0],
+        [(truth, "Exact"), (kan_prediction, kan_label), (mlp_prediction, mlp_label)],
+    ):
+        im = ax.imshow(field, extent=extent, origin="lower", aspect="auto", cmap="RdBu_r", vmin=vmin_u, vmax=vmax_u)
+        ax.set_title(label, fontsize=13)
+        fig.colorbar(im, ax=ax, shrink=0.78)
+
+    # Row 1: errors
+    for ax, (field, label) in zip(
+        axes[1],
+        [(truth - truth, "Reference (zero)"), (kan_error, f"{kan_label} error"), (mlp_error, f"{mlp_label} error")],
+    ):
+        im = ax.imshow(field, extent=extent, origin="lower", aspect="auto", cmap="magma", vmin=0, vmax=vmax_e)
+        ax.set_title(label, fontsize=13)
+        fig.colorbar(im, ax=ax, shrink=0.78)
+
+    for ax in axes[:, 0]:
+        ax.set_ylabel("$t$")
+    for ax in axes[1]:
+        ax.set_xlabel("$x$")
+
+    fig.suptitle(f"{kan_label} vs {mlp_label} — Prediction and Error Comparison", fontsize=15, fontweight="bold", y=1.02)
+    fig.tight_layout()
+    return fig
+
+
+def plot_pointwise_error_heatmap(
+    dataset: BurgersGridDataset,
+    prediction: np.ndarray,
+    title: str = "Pointwise absolute error",
+) -> Figure:
+    """Publication-quality heatmap of pointwise absolute error."""
+    error = np.abs(prediction - dataset.solution)
+    extent = [dataset.x[0], dataset.x[-1], dataset.t[0], dataset.t[-1]]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    im = ax.imshow(error, extent=extent, origin="lower", aspect="auto", cmap="inferno")
+    ax.set_xlabel("$x$", fontsize=13)
+    ax.set_ylabel("$t$", fontsize=13)
+    ax.set_title(title, fontsize=14, fontweight="bold")
+    fig.colorbar(im, ax=ax, label="$|u - \\hat{u}|$", shrink=0.85)
+    fig.tight_layout()
+    return fig
+

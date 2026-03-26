@@ -44,6 +44,7 @@ from .plotting import (
     plot_training_history,
 )
 from .plotting_2d import (
+    plot_darcy_3d_surface,
     plot_darcy_cross_sections,
     plot_darcy_dataset_examples,
     plot_darcy_error_distribution,
@@ -115,6 +116,7 @@ __all__ = [
     "plot_resolution_metrics",
     "plot_training_history",
     # 2D plotting
+    "plot_darcy_3d_surface",
     "plot_darcy_cross_sections",
     "plot_darcy_dataset_examples",
     "plot_darcy_error_distribution",

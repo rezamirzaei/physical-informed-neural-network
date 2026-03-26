@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.colors import Normalize, LogNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 — registers 3-D projection
 
 from .data_2d import DarcyDataset, DarcySample
 from .schemas import NeuralOperatorExperimentSummary
@@ -231,6 +232,55 @@ def plot_darcy_cross_sections(
     axes[0].legend()
 
     fig.suptitle("Cross-section comparison", fontsize=15, fontweight="bold", y=1.02)
+    fig.tight_layout()
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# 3D surface plots
+# ---------------------------------------------------------------------------
+
+def plot_darcy_3d_surface(
+    sample: DarcySample,
+    prediction: np.ndarray,
+    title: str = "Darcy flow — 3-D solution surface",
+) -> Figure:
+    """Render exact solution and FNO prediction as 3-D surface plots with error surface.
+
+    Parameters
+    ----------
+    sample : DarcySample
+        A single Darcy-flow sample with ``grid_x``, ``grid_y``, and ``solution``.
+    prediction : np.ndarray
+        FNO prediction of shape ``(Nx, Ny)``.
+    title : str
+        Figure super-title.
+
+    Returns
+    -------
+    Figure
+        Matplotlib figure with three 3-D subplots.
+    """
+    grid_x, grid_y = np.meshgrid(sample.grid_x, sample.grid_y, indexing="ij")
+    truth = sample.solution
+    error = np.abs(prediction - truth)
+
+    fig = plt.figure(figsize=(20, 5.8))
+    panels = [
+        (truth, "Exact $u(x,y)$", "RdBu_r"),
+        (prediction, "FNO prediction $\\hat{u}(x,y)$", "RdBu_r"),
+        (error, "$|u - \\hat{u}|$", "inferno"),
+    ]
+    for idx, (field, label, cmap) in enumerate(panels):
+        ax = fig.add_subplot(1, 3, idx + 1, projection="3d")
+        ax.plot_surface(grid_x, grid_y, field, cmap=cmap, edgecolor="none", alpha=0.90, rcount=60, ccount=60)
+        ax.set_xlabel("$x$", labelpad=8)
+        ax.set_ylabel("$y$", labelpad=8)
+        ax.set_zlabel("$u$", labelpad=6)
+        ax.set_title(label, fontsize=12, pad=12)
+        ax.view_init(elev=30, azim=-50)
+
+    fig.suptitle(title, fontsize=15, fontweight="bold", y=1.02)
     fig.tight_layout()
     return fig
 

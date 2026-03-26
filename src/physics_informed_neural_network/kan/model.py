@@ -193,3 +193,75 @@ class KolmogorovArnoldNetwork(nn.Module):
                 for input_index in range(first_layer.in_features)
             }
         return responses
+
+
+class MLPBaseline(nn.Module):
+    """Standard MLP baseline with comparable parameter count for KAN comparison.
+
+    Architecture: ``input → [Linear → activation] × depth → Linear → 1``
+
+    Parameters
+    ----------
+    input_dim : int
+        Number of input features (2 for (x, t) coordinates).
+    hidden_dim : int
+        Width of each hidden layer.
+    depth : int
+        Number of hidden layers.
+    activation : str
+        Activation function name: ``"silu"``, ``"tanh"``, ``"relu"``, or ``"gelu"``.
+    """
+
+    def __init__(
+        self,
+        input_dim: int = 2,
+        hidden_dim: int = 32,
+        depth: int = 3,
+        activation: str = "silu",
+    ) -> None:
+        super().__init__()
+        self.input_dim = input_dim
+
+        act_fn: nn.Module
+        if activation == "silu":
+            act_fn = nn.SiLU()
+        elif activation == "tanh":
+            act_fn = nn.Tanh()
+        elif activation == "relu":
+            act_fn = nn.ReLU()
+        elif activation == "gelu":
+            act_fn = nn.GELU()
+        else:
+            raise ValueError(f"Unsupported activation: {activation}")
+
+        layers: list[nn.Module] = [nn.Linear(input_dim, hidden_dim), act_fn]
+        for _ in range(depth - 1):
+            layers += [nn.Linear(hidden_dim, hidden_dim), act_fn]
+        layers.append(nn.Linear(hidden_dim, 1))
+        self.net = nn.Sequential(*layers)
+
+        self._init_weights()
+
+    def _init_weights(self) -> None:
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_normal_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        if inputs.ndim != 2 or inputs.shape[1] != self.input_dim:
+            raise ValueError(
+                f"Expected inputs of shape (batch, {self.input_dim}), received {tuple(inputs.shape)}"
+            )
+        return self.net(inputs)
+
+    def architecture_string(self) -> str:
+        hidden_dims = []
+        for m in self.net:
+            if isinstance(m, nn.Linear) and m.out_features != 1:
+                hidden_dims.append(str(m.out_features))
+        return f"MLPBaseline(input={self.input_dim}, hidden=[{','.join(hidden_dims)}])"
+
+    def count_parameters(self) -> int:
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)

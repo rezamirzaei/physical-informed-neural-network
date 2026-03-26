@@ -71,6 +71,8 @@ class KANOptimizationConfig(BaseModel):
     scheduler_gamma: float = Field(default=0.6, gt=0.0, le=1.0)
     grad_clip: float = Field(default=1.0, ge=0.0)
     log_every: PositiveInt = 25
+    patience: int = Field(default=0, ge=0, description="Early-stopping patience (0 = disabled).")
+    min_delta: float = Field(default=1e-6, ge=0.0, description="Minimum improvement to reset patience counter.")
 
 
 class KANArtifactConfig(BaseModel):
