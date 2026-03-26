@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 import torch
 
 from physics_informed_neural_network.neural_operator.data import (
@@ -150,3 +151,52 @@ def test_neural_operator_smoke_experiment_runs_end_to_end(tmp_path) -> None:
     assert experiment.refined_prediction.shape == (config.data.test_samples, config.data.evaluation_resolution)
     assert experiment.summary.evaluations["test"].metrics.relative_l2 >= 0.0
     assert experiment.summary.evaluations["refined_test"].resolution == config.data.evaluation_resolution
+
+
+# ---------------------------------------------------------------------------
+# Plotting (smoke tests — verify they return a Figure without error)
+# ---------------------------------------------------------------------------
+
+
+class TestNeuralOperatorPlotting:
+    """Verify all 1-D neural-operator plotting functions produce Figures."""
+
+    @pytest.fixture()
+    def experiment(self, tmp_path):
+        import matplotlib
+        matplotlib.use("Agg")
+        config = build_smoke_test_config(output_dir=tmp_path / "artifacts")
+        return run_neural_operator_experiment(config)
+
+    def test_plot_dataset_examples(self, experiment) -> None:
+        from physics_informed_neural_network.neural_operator.plotting import plot_dataset_examples
+        fig = plot_dataset_examples(experiment.datasets.train)
+        assert fig is not None
+
+    def test_plot_training_history(self, experiment) -> None:
+        from physics_informed_neural_network.neural_operator.plotting import plot_training_history
+        fig = plot_training_history(experiment.history)
+        assert fig is not None
+
+    def test_plot_prediction_comparison(self, experiment) -> None:
+        from physics_informed_neural_network.neural_operator.plotting import plot_prediction_comparison
+        sample = experiment.datasets.test.sample(0)
+        fig = plot_prediction_comparison(sample, experiment.native_prediction[0], title="Test")
+        assert fig is not None
+
+    def test_plot_resolution_metrics(self, experiment) -> None:
+        from physics_informed_neural_network.neural_operator.plotting import plot_resolution_metrics
+        fig = plot_resolution_metrics(experiment.summary)
+        assert fig is not None
+
+    def test_plot_frequency_spectrum(self, experiment) -> None:
+        from physics_informed_neural_network.neural_operator.plotting import plot_frequency_spectrum
+        sample = experiment.datasets.refined_test.sample(0)
+        fig = plot_frequency_spectrum(
+            sample.grid, sample.solution,
+            experiment.refined_prediction[0],
+            title="Spectrum test",
+        )
+        assert fig is not None
+
+

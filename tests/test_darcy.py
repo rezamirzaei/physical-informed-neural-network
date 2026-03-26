@@ -200,3 +200,56 @@ class TestDarcyPipelineSmoke:
         assert experiment.refined_prediction.shape[0] == config.data.test_samples
         assert np.all(np.isfinite(experiment.native_prediction))
         assert np.all(np.isfinite(experiment.refined_prediction))
+
+
+# ---------------------------------------------------------------------------
+# Plotting (smoke tests — verify Darcy plotting functions produce Figures)
+# ---------------------------------------------------------------------------
+
+
+class TestDarcyPlotting:
+    """Verify all 2-D Darcy plotting functions produce Figures."""
+
+    @pytest.fixture()
+    def experiment(self):
+        import matplotlib
+        matplotlib.use("Agg")
+        config = build_darcy_smoke_test_config()
+        return run_darcy_experiment(config)
+
+    def test_plot_darcy_dataset_examples(self, experiment) -> None:
+        from physics_informed_neural_network.neural_operator.plotting_2d import plot_darcy_dataset_examples
+        fig = plot_darcy_dataset_examples(experiment.datasets.train, sample_indices=(0,))
+        assert fig is not None
+
+    def test_plot_darcy_prediction_comparison(self, experiment) -> None:
+        from physics_informed_neural_network.neural_operator.plotting_2d import plot_darcy_prediction_comparison
+        sample = experiment.datasets.test.sample(0)
+        fig = plot_darcy_prediction_comparison(sample, experiment.native_prediction[0])
+        assert fig is not None
+
+    def test_plot_darcy_3d_surface(self, experiment) -> None:
+        from physics_informed_neural_network.neural_operator.plotting_2d import plot_darcy_3d_surface
+        sample = experiment.datasets.test.sample(0)
+        fig = plot_darcy_3d_surface(sample, experiment.native_prediction[0])
+        assert fig is not None
+
+    def test_plot_darcy_cross_sections(self, experiment) -> None:
+        from physics_informed_neural_network.neural_operator.plotting_2d import plot_darcy_cross_sections
+        sample = experiment.datasets.test.sample(0)
+        fig = plot_darcy_cross_sections(sample, experiment.native_prediction[0])
+        assert fig is not None
+
+    def test_plot_darcy_error_distribution(self, experiment) -> None:
+        from physics_informed_neural_network.neural_operator.plotting_2d import plot_darcy_error_distribution
+        fig = plot_darcy_error_distribution(
+            experiment.native_prediction,
+            experiment.datasets.test.solution,
+        )
+        assert fig is not None
+
+    def test_plot_darcy_resolution_metrics(self, experiment) -> None:
+        from physics_informed_neural_network.neural_operator.plotting_2d import plot_darcy_resolution_metrics
+        fig = plot_darcy_resolution_metrics(experiment.summary)
+        assert fig is not None
+

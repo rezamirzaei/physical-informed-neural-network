@@ -2,7 +2,7 @@
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-99%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-177%20passed-brightgreen)
 
 Clean, reproducible PyTorch implementation of a Physics-Informed Neural Network (PINN) for the viscous 1-D Burgers equation. The repository is structured as a small research codebase rather than a one-off notebook: packaged source code, a CLI, tests, CI, and example artifacts are all included.
 
@@ -50,7 +50,7 @@ src/physics_informed_neural_network/
     ├── plotting.py, plotting_2d.py       # Publication-quality 1-D and 2-D plots (incl. 3-D surfaces)
     └── presets.py, schemas.py            # Smoke/tutorial presets, Pydantic schemas
 
-tests/                                    # 99 tests covering all three stacks
+tests/                                    # 177 tests covering all three stacks
 notebooks/                                # Generated tutorial notebooks (3)
 tools/                                    # Notebook generators
 artifacts/                                # Example outputs
@@ -61,7 +61,7 @@ artifacts/                                # Example outputs
 - `src/physics_informed_neural_network/`: the single packaged implementation, public API, and CLI
 - `src/physics_informed_neural_network/kan/`: reusable KAN stack with MLP baseline and early stopping
 - `src/physics_informed_neural_network/neural_operator/`: 1-D diffusion and 2-D Darcy FNO stacks with 3-D surface plots
-- `tests/`: 99 automated tests, including unit tests for every component and end-to-end smoke tests
+- `tests/`: 177 automated tests, including unit tests for every component and end-to-end smoke tests
 - `artifacts/burgers_pinn/`: example outputs from a reference run
 - `notebooks/burgers_equation_pinn.ipynb`: generated PINN tutorial notebook
 - `notebooks/neural_operator_function_spaces.ipynb`: FNO tutorial (1-D + 2-D Darcy flow)
@@ -238,12 +238,14 @@ With an activated virtualenv:
 pytest -q
 ```
 
-The test suite (99 tests) includes:
+The test suite (177 tests) includes:
 
-- **PINN**: FourierFeatureEmbedding, ResidualBlock, BurgersPINN, AdaptiveLossWeights, BurgersResidual, end-to-end pipeline smoke test
-- **KAN**: PiecewiseLinearBasis, CoordinateNormalizer, TensorNormalizer, KANLayer, KolmogorovArnoldNetwork, MLPBaseline, metrics, dataset properties, config validation, early stopping, all plotting functions
-- **Neural Operator 1-D**: TensorNormalizer, SpectralConv1d, OperatorSample, error metrics, Dirichlet solver, resolution transfer, end-to-end pipeline
-- **Neural Operator 2-D**: GRF sampling, Darcy solver (boundary, positivity, symmetry), TensorNormalizer2d, SpectralConv2d, FNO-2d shapes, dataset properties, end-to-end pipeline
+- **PINN**: FourierFeatureEmbedding, ResidualBlock, BurgersPINN, AdaptiveLossWeights, BurgersResidual, reference solution (IC, BC, boundedness), observations (noiseless, noisy, reproducibility), collocation sampling (interior, boundary, initial), all plotting functions, presets, end-to-end pipeline smoke test
+- **KAN**: PiecewiseLinearBasis, CoordinateNormalizer, TensorNormalizer, KANLayer, KolmogorovArnoldNetwork, MLPBaseline, metrics, dataset properties, config validation, early stopping, all plotting functions (including KAN-vs-MLP comparison)
+- **Neural Operator 1-D**: TensorNormalizer, SpectralConv1d, OperatorSample, error metrics, Dirichlet solver, resolution transfer, all plotting functions, end-to-end pipeline
+- **Neural Operator 2-D**: GRF sampling, Darcy solver (boundary, positivity, symmetry), TensorNormalizer2d, SpectralConv2d, FNO-2d shapes, dataset properties, all 2-D plotting functions (dataset examples, prediction comparison, 3-D surfaces, cross sections, error distribution, resolution metrics), end-to-end pipeline
+- **Shared utilities**: `ensure_directory`, `set_global_seed` (NumPy + PyTorch reproducibility), `select_device`, `latin_hypercube_sample`
+- **Configuration**: all Pydantic config models with boundary validation, assignment validation, deep copy
 - Configuration validation and reference-solution shape checks
 
 ## Example Outputs

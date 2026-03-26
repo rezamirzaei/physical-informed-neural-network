@@ -460,3 +460,26 @@ class TestPlotting:
         fig = plot_edge_functions(sample_axis, edge_responses)
         assert fig is not None
 
+    def test_plot_kan_vs_mlp_comparison(self, experiment) -> None:
+        from physics_informed_neural_network.kan.model import MLPBaseline
+        from physics_informed_neural_network.kan.training import KANTrainer
+
+        mlp = MLPBaseline(input_dim=2, hidden_dim=8, depth=2, activation="silu")
+        trainer = KANTrainer(
+            model=mlp,
+            config=experiment.config.optimization,
+            device=torch.device("cpu"),
+            coordinate_normalizer=experiment.datasets.train.normalizer,
+        )
+        trainer.fit(experiment.datasets.train, experiment.datasets.validation)
+        mlp_pred = trainer.predict_dataset(experiment.datasets.evaluation)
+        mlp_grid = experiment.datasets.evaluation.reshape_prediction(mlp_pred)
+
+        fig = plot_kan_vs_mlp_comparison(
+            experiment.datasets.evaluation,
+            experiment.evaluation_prediction,
+            mlp_grid,
+        )
+        assert fig is not None
+
+
